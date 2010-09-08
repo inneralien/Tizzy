@@ -20,17 +20,29 @@ not
         state_name -> next_state_name [label = "start"];
     These events will generate input ports of the same name as the label.
 """
-class StateTransition():
+class StateTransitionOld():
     def __init__(self, state, state_next, affector=None):
         self.state = state
         self.state_next = state_next
         self.affector = affector
+
+class StateTransition():
+    def __init__(self, state):
+        self.state = state
+        self.transitions = []
+
+        self.default = None
+
+    def str(self):
+        return self.state
+
 
 class FSMGen():
     def __init__(self):
         self.__title = ""
         self.__unique_states = []
         self.__num_states = 0
+        self.__states = {}
         self.__transitions = []
         self.__unique_affectors = []
         self.logger = logging.getLogger("FSMGen")
@@ -60,6 +72,30 @@ class FSMGen():
         """
         self.logger.info("Checking for explicit same-state transitions")
         affector_states = []
+        for state in self.__unique_states:
+            for trans in self.__states[state].transitions:
+                if(trans[1] is None):
+                    self.logger.debug("Has same state trans: %s" % (state))
+                    has_same_state_trans = True
+                    break
+                else:
+                    has_same_state_trans = False
+            if(has_same_state_trans is False):
+                affector_states.append(state)
+
+        if(len(affector_states) > 0):
+            raise MissingTransitionsError("addSameStateTransition",
+                "Some states may not have all transitions covered",
+                help.missing_transition_help,
+                affector_states)
+
+    def checkForDefaultStateOld(self):
+        """
+        If the transition has an affector, check to see if there is
+        also a same state transition with no affector.
+        """
+        self.logger.info("Checking for explicit same-state transitions")
+        affector_states = []
         for t in self.__transitions:
             self.logger.debug("CHECKING: %s -> %s (%s)" % ( t.state,
                                                 t.state_next,
@@ -72,7 +108,6 @@ class FSMGen():
                     affector_states.append(t.state)
 
         for t in self.__transitions:
-#            if((t.state == t.state_next) & (t.affector is None)):
             if(t.affector is None):
                 if(t.state in affector_states):
                     # Remove that state from the list
@@ -174,6 +209,8 @@ class FSMGen():
                 state = m_state.group(1)
                 if state not in self.__unique_states:
                     self.__unique_states.append(state)
+                    self.logger.debug("Adding state: %s" % state)
+                    self.__states[state] = StateTransition(state)
                     ## Find Transitions
                 m_affector = re_affectors.search(line)
                 if(m_affector is not None):
@@ -181,15 +218,26 @@ class FSMGen():
                     ## Strip off ~ and !
                     affector_stripped = re.sub(r'~|!','', affector)
                     if(affector_stripped not in self.__unique_affectors):
-                        self.logger.debug("Adding unique affector '%s'" % affector_stripped)
+                        self.logger.debug("Adding unique affector: '%s'" % affector_stripped)
                         self.__unique_affectors.append(affector_stripped)
                 else:
                     affector = None
 
-                self.__transitions.append(StateTransition(m_state.group(1),
-                                                        m_state.group(2),
-                                                        affector))
-            self.__num_states = len(self.__unique_states)
+                next_state = m_state.group(2)
+                self.logger.debug("Adding transition: %s -> %s (%s)" %  (state, next_state, affector))
+                trans = (next_state, affector)
+                if(trans in self.__states[state].transitions):
+                    raise DuplicateTransitionError("checkForDuplicateTransitions",
+                        "A duplicate state transition was found\n    %s -> %s" % (state, next_state),
+                        None)
+                else:
+                    self.__states[state].transitions.append((next_state, affector))
+
+        self.__num_states = len(self.__unique_states)
+        self.logger.debug("State Transitions:")
+        for state in self.__unique_states:
+            for trans in self.__states[state].transitions:
+                self.logger.debug("    %s -> %s %s" % (state, trans[0], trans[1]))
 
     def getInputPorts(self):
         """
@@ -202,6 +250,53 @@ class FSMGen():
         Creates and returns a string of output ports.
         """
         pass
+
+    def genNextStateLogicString(self):
+        """
+        Returns a string that represents the next state generator Verilog code.
+        """
+        str = ""
+            ## The first state is the default state
+        default_state = self.__unique_states[0]
+        for state in self.__unique_states:
+            final_trans = None
+            first_trans = None
+            other_trans = []
+
+            str  += "        state[%s] :\n" % state
+
+            num_trans = len(self.__states[state].transitions)
+            for i in range(num_trans):
+                trans = self.__states[state].transitions[i]
+
+                if(trans[1] is None):
+                    if(final_trans is None):
+                        final_trans = trans
+                    else:
+                        raise MultipleDefaultTransitionsError('genNextStateLogicString', None, None)
+                else:
+                    if(i == num_trans-1):
+                        first_trans = trans
+                    else:
+                        other_trans.append(trans)
+
+            if(first_trans is not None):
+                str += "            if(%s)\n" % first_trans[1]
+                str += "                state_next[%s] = 1'b1;\n" % first_trans[0]
+
+            if(other_trans is not None):
+                for trans in other_trans:
+                    str += "            else if(%s)\n" % trans[1]
+                    str += "                state_next[%s] = 1'b1;\n" % trans[0]
+
+            if(final_trans is not None):
+                if(num_trans != 1):
+                    str += "            else\n"
+                str += "                state_next[%s] = 1'b1;\n" % final_trans[0]
+
+        str += "        default:\n"
+        str += "            state_next[%s] = 1'b1;" % default_state
+        return str
 
     def writeVerilog(self):
         self.subs['filename'] = self.__name + '.v'
@@ -223,6 +318,7 @@ class FSMGen():
                 str += ";"
             self.subs['state_params'] += str
         self.subs['range'] = self.__num_states
+        self.subs['next_state_logic'] = self.genNextStateLogicString()
 
         f.write(s.safe_substitute(self.subs))
         f.close()
@@ -240,6 +336,10 @@ class MissingTransitionsError(FSMError):
         self.states = states
 
 class DuplicateTransitionError(FSMError):
+    def __init__(self, method_name, error_message, long_message):
+        FSMError.__init__(self, method_name, error_message, long_message)
+
+class MultipleDefaultTransitionsError(FSMError):
     def __init__(self, method_name, error_message, long_message):
         FSMError.__init__(self, method_name, error_message, long_message)
 
