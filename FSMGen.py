@@ -20,12 +20,6 @@ not
         state_name -> next_state_name [label = "start"];
     These events will generate input ports of the same name as the label.
 """
-class StateTransitionOld():
-    def __init__(self, state, state_next, affector=None):
-        self.state = state
-        self.state_next = state_next
-        self.affector = affector
-
 class StateTransition():
     def __init__(self, state):
         self.state = state
@@ -82,42 +76,6 @@ class FSMGen():
                     has_same_state_trans = False
             if(has_same_state_trans is False):
                 affector_states.append(state)
-
-        if(len(affector_states) > 0):
-            raise MissingTransitionsError("addSameStateTransition",
-                "Some states may not have all transitions covered",
-                help.missing_transition_help,
-                affector_states)
-
-    def checkForDefaultStateOld(self):
-        """
-        If the transition has an affector, check to see if there is
-        also a same state transition with no affector.
-        """
-        self.logger.info("Checking for explicit same-state transitions")
-        affector_states = []
-        for t in self.__transitions:
-            self.logger.debug("CHECKING: %s -> %s (%s)" % ( t.state,
-                                                t.state_next,
-                                                t.affector))
-            if(t.affector is not None):
-                # If it's already in affector_states don't bother putting
-                # it in again
-                if(t.state not in affector_states):
-                    self.logger.debug("Adding state %s to the affector_states list" % t.state)
-                    affector_states.append(t.state)
-
-        for t in self.__transitions:
-            if(t.affector is None):
-                if(t.state in affector_states):
-                    # Remove that state from the list
-                    if(affector_states.count(t.state) != 1):
-                        raise FSMError("addSameStateTransition",
-                            "Too many '%s' states in the transitions list" % t.state,
-                            None)
-                    else:
-                        self.logger.debug("State %s already has a same-state transition" % t.state)
-                        affector_states.remove(t.state)
 
         if(len(affector_states) > 0):
             raise MissingTransitionsError("addSameStateTransition",
