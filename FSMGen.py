@@ -39,6 +39,8 @@ class FSMGen():
         self.__states = {}
         self.__transitions = []
         self.__unique_affectors = []
+        self.__default_state = None
+        self.__dotfile = None
         self.logger = logging.getLogger("FSMGen")
         h = NullHandler()
         logging.getLogger("FSMGen").addHandler(h)
@@ -143,9 +145,9 @@ class FSMGen():
         re_affectors = re.compile(r'\[\s*label\s*=\s*\"(.*)\"\s*\]')
 
         f = open(filename, 'r')
-        file = f.read()
+        self.__dotfile = f.read()
         f.close()
-        file = file.split('\n')
+        file = self.__dotfile.split('\n')
         for line in file:
             st = None
 
@@ -191,6 +193,7 @@ class FSMGen():
                 else:
                     self.__states[state].transitions.append((next_state, affector))
 
+        self.__default_state = self.__unique_states[0]
         self.__num_states = len(self.__unique_states)
         self.logger.debug("State Transitions:")
         for state in self.__unique_states:
@@ -215,7 +218,6 @@ class FSMGen():
         """
         str = ""
             ## The first state is the default state
-        default_state = self.__unique_states[0]
         for state in self.__unique_states:
             final_trans = None
             first_trans = None
@@ -253,7 +255,16 @@ class FSMGen():
                 str += "                state_next[%s] = 1'b1;\n" % final_trans[0]
 
         str += "        default:\n"
-        str += "            state_next[%s] = 1'b1;" % default_state
+        str += "            state_next[%s] = 1'b1;" % self.__default_state
+        return str
+
+    def genStateGeneratorString(self):
+        """
+        Returns a string that represents the state generator Verilog code.
+        """
+        str = ""
+        str += "        state <= `D %d'b0;\n" % self.__num_states
+        str += "        state[%s] <= `D 1'b1;" % self.__default_state
         return str
 
     def writeVerilog(self):
@@ -277,6 +288,8 @@ class FSMGen():
             self.subs['state_params'] += str
         self.subs['range'] = self.__num_states
         self.subs['next_state_logic'] = self.genNextStateLogicString()
+        self.subs['state_generator'] = self.genStateGeneratorString()
+        self.subs['digraph'] = self.__dotfile
 
         f.write(s.safe_substitute(self.subs))
         f.close()

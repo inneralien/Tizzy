@@ -35,7 +35,7 @@ end
 /* State Generator */
 always @(posedge clock or posedge reset)
     if(reset) begin
-        $state_generator
+$state_generator
     end
     else
         state <= `D state_next;
