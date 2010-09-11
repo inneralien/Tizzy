@@ -20,7 +20,7 @@ if __name__ == '__main__':
                 'critical': logging.CRITICAL,
             }
 
-    parser = OptionParser(usage="%prog <options>", version=__version__)
+    parser = OptionParser(usage="%prog <options> [filename]", version=__version__)
     parser.add_option("-d", "--debug",
                         dest="debug",
                         default='error',
