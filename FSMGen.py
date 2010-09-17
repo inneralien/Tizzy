@@ -1,3 +1,4 @@
+import sys
 import re
 import time
 import logging
@@ -10,13 +11,14 @@ from template import template
 Reads in a Graphviz .dot file and generates a Verilog state machine based
 on some simple rules.
 
-1) State transitions should only be single transitions:
+1)  Only one state transitions per line:
         state_name -> next_state_name;
         next_state_name -> next_next_state_name;
-not
+    not
         state_name -> next_state_name -> next_next_state_name;
 
-2) Events that cause state transitions are defined by .dot labels:
+2)  Events that cause state transitions are called "affectors" and are defined
+    by .dot labels:
         state_name -> next_state_name [label = "start"];
     These events will generate input ports of the same name as the label.
 """
@@ -267,10 +269,14 @@ class FSMGen():
         str += "        state[%s] <= `D 1'b1;" % self.__default_state
         return str
 
-    def writeVerilog(self):
-        self.subs['filename'] = self.__name + '.v'
+    def writeVerilog(self, filename=None):
+        """
+        Writes the verilog using a string template.
+        If filename is None then stdout is used.
+        """
+#        self.subs['filename'] = self.__name + '.v'
+        self.subs['filename'] = filename
         s = string.Template(template)
-        f = open(self.subs['filename'], 'w')
 
         self.subs['creation_date'] = time.strftime("%b %d %Y")
         self.subs['title'] = self.__title
@@ -291,8 +297,12 @@ class FSMGen():
         self.subs['state_generator'] = self.genStateGeneratorString()
         self.subs['digraph'] = self.__dotfile
 
-        f.write(s.safe_substitute(self.subs))
-        f.close()
+        if(filename is None):
+            sys.stdout.write(s.safe_substitute(self.subs))
+        else:
+            f = open(self.subs['filename'], 'w')
+            f.write(s.safe_substitute(self.subs))
+            f.close()
 
 class FSMError(Exception):
     def __init__(self, method_name, error_message, long_message):

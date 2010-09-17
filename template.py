@@ -42,6 +42,12 @@ $state_generator
 endmodule
 
 /*
+To reproduce a graphical version of the the state diagram from the text below,
+go to the Graphviz website and download their free tool.
+    http://www.graphviz.org/
+
+Mac OSX version:
+    http://www.pixelglow.com/graphviz/
 
 $digraph
 

@@ -7,10 +7,10 @@ import FSMGen
 import logging
 
 __author__        = "Tim Weaver"
-__copyright__     = "Very White Atom Designs, 2010"
+__copyright__     = "Copyright (c) Very White Atom Design, 2010"
 __creation_date__ = "Thu Sep  2 09:40:29 PDT 2010"
 __version__       = '0.1.0'
-
+__disclaimer__    = 'Not responsible...Use at your own risk'
 
 if __name__ == '__main__':
     LEVELS = {  'debug': logging.DEBUG,
@@ -25,16 +25,19 @@ if __name__ == '__main__':
                         dest="debug",
                         default='error',
                         help="Run in special debug mode. Valid options are debug, info, warning, error, critical")
-    parser.add_option("-c", "--checks",
-                        default=False,
-                        action='store_true',
-                        dest="checks",
-                        help="Run some simple error checking")
+    parser.add_option("-n", "--nochecks",
+                        default=True,
+                        action='store_false',
+                        dest="nochecks",
+                        help="Do not run error checking routines")
     parser.add_option("-l", "--long_messages",
                         default=False,
                         action='store_true',
                         dest="long_messages",
                         help="Print out extra help messages on warnings and errors")
+    parser.add_option("-o", "--output",
+                        dest="output_file",
+                        help="Write output to a file instead of stdout")
 
     (options, args) = parser.parse_args()
 
@@ -50,28 +53,27 @@ if __name__ == '__main__':
     fsm = FSMGen.FSMGen()
     fsm.parseDotFile(filename)
 
-    print "Found %d Unique States:" % (len(fsm.getUniqueStates()))
+    sys.stderr.write("Found %d Unique States:\n" % (len(fsm.getUniqueStates())))
     for i in fsm.getUniqueStates():
-        print "    %s" % i
+        sys.stderr.write("    %s\n" % i)
 
     ## Checks
-    if(options.checks):
+    if(options.nochecks):
         ## Check for default states
         try:
             fsm.checkForDefaultState()
         except FSMGen.MissingTransitionsError, info:
-            print "\nThe following states may not have all transition cases covered."
+            sys.stderr.write("\nThe following states may not have all transition cases covered.\n")
             for i in info.states:
-                print "    %s" % i
+                sys.stderr.write("    %s\n" % i)
             if(options.long_messages):
-                print info.long_message
-#        sys.exit(1)
+                sys.stderr.write(info.long_message)
 
         ## Check for duplicate state transitions
         try:
             fsm.checkForDuplicateTransitions()
         except FSMGen.DuplicateTransitionError, info:
-            print info.error_message
+            sys.stderr.write(info.error_message)
 
-    print "Writing Verilog"
-    fsm.writeVerilog()
+    sys.stderr.write("Writing Verilog: %s\n" % options.output_file)
+    fsm.writeVerilog(options.output_file)

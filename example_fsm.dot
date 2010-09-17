@@ -1,0 +1,11 @@
+digraph example_fsm
+{
+    label = "Example Finite State Machine";
+    stIDLE -> stIDLE;
+    stIDLE -> stPIPE1 [label = "din_rdy"];
+    stPIPE1 -> stPIPE2;
+    stPIPE2 -> stLOAD_NEXT;
+    stLOAD_NEXT -> stLOAD_DOUT [label = "done"];
+    stLOAD_NEXT -> stPIPE1
+    stLOAD_DOUT -> stIDLE;
+}
