@@ -229,17 +229,22 @@ class FSMGen():
 
             num_trans = len(self.__states[state].transitions)
             for i in range(num_trans):
+                remaining = num_trans - i
                 trans = self.__states[state].transitions[i]
+                self.logger.debug(remaining)
 
                 if(trans[1] is None):
                     if(final_trans is None):
+                        self.logger.debug("Final trans: %r %r" % (trans[0], trans[1]))
                         final_trans = trans
                     else:
                         raise MultipleDefaultTransitionsError('genNextStateLogicString', None, None)
                 else:
-                    if(i == num_trans-1):
+                    if(first_trans is None):
+                        self.logger.debug("First trans: %r %r" % (trans[0], trans[1]))
                         first_trans = trans
                     else:
+                        self.logger.debug("Other trans: %r %r" % (trans[0], trans[1]))
                         other_trans.append(trans)
 
             if(first_trans is not None):

@@ -15,8 +15,8 @@ module $module_name (
     input   wire clock,
     input   wire reset,
 $inputs
-    output  reg [$msb,$lsb] state,
-    output  reg [$msb,$lsb] state_next
+    output  reg [$msb:$lsb] state,
+    output  reg [$msb:$lsb] state_next
 );
 
 /* State parameters for 1-hot encoding */
