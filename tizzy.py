@@ -9,7 +9,7 @@ import logging
 __author__        = "Tim Weaver"
 __copyright__     = "Copyright (c) Very White Atom Design, 2010"
 __creation_date__ = "Thu Sep  2 09:40:29 PDT 2010"
-__version__       = '0.1.0'
+__version__       = 'v0.1.0'
 __disclaimer__    = 'Not responsible...Use at your own risk'
 
 if __name__ == '__main__':
@@ -76,4 +76,4 @@ if __name__ == '__main__':
             sys.stderr.write(info.error_message)
 
     sys.stderr.write("Writing Verilog: %s\n" % options.output_file)
-    fsm.writeVerilog(options.output_file)
+    fsm.writeVerilog(__version__, options.output_file)
