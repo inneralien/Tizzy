@@ -177,11 +177,13 @@ class FSMGen():
                 m_affector = re_affectors.search(line)
                 if(m_affector is not None):
                     affector = m_affector.group(1)
-                    ## Strip off ~ and !
-                    affector_stripped = re.sub(r'~|!','', affector)
-                    if(affector_stripped not in self.__unique_affectors):
-                        self.logger.debug("Adding unique affector: '%s'" % affector_stripped)
-                        self.__unique_affectors.append(affector_stripped)
+                    ## Strip off ~ and ! etc.
+                    affector_stripped = re.sub('[~|!()&^]','',affector).split()
+                    self.logger.debug("Stripped affectors: '%s'" % affector_stripped)
+                    for i in affector_stripped:
+                        if(i not in self.__unique_affectors):
+                            self.logger.debug("Adding unique affector: '%s'" % i)
+                            self.__unique_affectors.append(i)
                 else:
                     affector = None
 
@@ -274,13 +276,16 @@ class FSMGen():
         str += "        state[%s] <= `D 1'b1;" % self.__default_state
         return str
 
-    def writeVerilog(self, filename=None):
+    def writeVerilog(self, version, filename=None):
         """
         Writes the verilog using a string template.
         If filename is None then stdout is used.
         """
 #        self.subs['filename'] = self.__name + '.v'
-        self.subs['filename'] = filename
+        if(filename is None):
+            self.subs['filename'] = "STDIO"
+        else:
+            self.subs['filename'] = filename
         s = string.Template(template)
 
         self.subs['creation_date'] = time.strftime("%b %d %Y")
@@ -301,6 +306,7 @@ class FSMGen():
         self.subs['next_state_logic'] = self.genNextStateLogicString()
         self.subs['state_generator'] = self.genStateGeneratorString()
         self.subs['digraph'] = self.__dotfile
+        self.subs['version'] = version
 
         if(filename is None):
             sys.stdout.write(s.safe_substitute(self.subs))
