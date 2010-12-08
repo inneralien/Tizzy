@@ -13,4 +13,4 @@ run:	sim
 
 .PHONY: clean
 clean:
-	rm -f example_fsm.v sim *.vcd
+	rm -f example_fsm.v example_fsm.vh sim *.vcd
