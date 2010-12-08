@@ -2,6 +2,7 @@
 # -*- coding: UTF-8 -*-
 
 from optparse import OptionParser
+import os
 import sys
 import FSMGen
 import logging
@@ -75,5 +76,13 @@ if __name__ == '__main__':
         except FSMGen.DuplicateTransitionError, info:
             sys.stderr.write(info.error_message)
 
+    if(options.output_file is not None):
+        (root, ext) = os.path.splitext(options.output_file)
+        include_filename = root+".vh"
+    else:
+        include_filename = None
+
     sys.stderr.write("Writing Verilog: %s\n" % options.output_file)
-    fsm.writeVerilog(__version__, options.output_file)
+
+    fsm.writeVerilog(__version__, options.output_file, include_filename)
+#    fsm.writeIncludeFile(__version__, include_filename)

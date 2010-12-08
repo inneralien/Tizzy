@@ -5,7 +5,8 @@ import logging
 import string
 from NullHandler import NullHandler
 import help
-from template import template
+from vlogTemplate import vlogTemplate
+from incTemplate import incTemplate
 
 """
 Reads in a Graphviz .dot file and generates a Verilog state machine based
@@ -276,18 +277,7 @@ class FSMGen():
         str += "        state[%s] <= `D 1'b1;" % self.__default_state
         return str
 
-    def writeVerilog(self, version, filename=None):
-        """
-        Writes the verilog using a string template.
-        If filename is None then stdout is used.
-        """
-#        self.subs['filename'] = self.__name + '.v'
-        if(filename is None):
-            self.subs['filename'] = "STDIO"
-        else:
-            self.subs['filename'] = filename
-        s = string.Template(template)
-
+    def fillStringSubs(self):
         self.subs['creation_date'] = time.strftime("%b %d %Y")
         self.subs['title'] = self.__title
         self.subs['module_name'] = self.__name
@@ -306,7 +296,28 @@ class FSMGen():
         self.subs['next_state_logic'] = self.genNextStateLogicString()
         self.subs['state_generator'] = self.genStateGeneratorString()
         self.subs['digraph'] = self.__dotfile
+
+    def writeVerilog(self, version, filename=None, include_file=None):
+        """
+        Writes the verilog using a string template.
+        If filename is None then stdout is used.
+        """
+            # Verilog Filename
         self.subs['version'] = version
+        if(filename is None):
+            self.subs['filename'] = "STDIO"
+        else:
+            self.subs['filename'] = filename
+
+            # Include Filename
+        if(include_file is None):
+            self.subs['include_file'] = "states.vh"
+        else:
+            self.subs['include_file'] = include_file
+
+        s = string.Template(vlogTemplate)
+
+        self.fillStringSubs()
 
         if(filename is None):
             sys.stdout.write(s.safe_substitute(self.subs))
@@ -314,6 +325,18 @@ class FSMGen():
             f = open(self.subs['filename'], 'w')
             f.write(s.safe_substitute(self.subs))
             f.close()
+
+        self.writeIncludeFile(version, self.subs['include_file'])
+
+    def writeIncludeFile(self, version, filename=None):
+        """
+        Writes an include file that contains the state parameters.
+        """
+        sys.stderr.write("Writing include file: %s\n" % filename)
+        s = string.Template(incTemplate)
+        f = open(self.subs['include_file'], 'w')
+        f.write(s.safe_substitute(self.subs))
+        f.close()
 
 class FSMError(Exception):
     def __init__(self, method_name, error_message, long_message):
