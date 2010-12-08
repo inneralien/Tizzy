@@ -2,7 +2,7 @@ all: run
 
 example_fsm.v:	../example_fsm.dot
 	../tizzy.py -o example_fsm.v ../example_fsm.dot
-	cp ../example_fsm.v .
+#	cp ../example_fsm.v .
 
 sim:	tb.v example_fsm.v
 	iverilog -o sim tb.v example_fsm.v
