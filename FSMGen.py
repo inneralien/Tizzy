@@ -1,4 +1,5 @@
 import sys
+import os
 import re
 import time
 import logging
@@ -311,9 +312,9 @@ class FSMGen():
 
             # Include Filename
         if(include_file is None):
-            self.subs['include_file'] = "states.vh"
-        else:
-            self.subs['include_file'] = include_file
+            include_file = "states.vh"
+        (head, tail) = os.path.split(include_file)
+        self.subs['include_file'] = tail
 
         s = string.Template(vlogTemplate)
 
@@ -326,7 +327,7 @@ class FSMGen():
             f.write(s.safe_substitute(self.subs))
             f.close()
 
-        self.writeIncludeFile(version, self.subs['include_file'])
+        self.writeIncludeFile(version, include_file)
 
     def writeIncludeFile(self, version, filename=None):
         """
@@ -334,7 +335,7 @@ class FSMGen():
         """
         sys.stderr.write("Writing include file: %s\n" % filename)
         s = string.Template(incTemplate)
-        f = open(self.subs['include_file'], 'w')
+        f = open(filename, 'w')
         f.write(s.safe_substitute(self.subs))
         f.close()
 
