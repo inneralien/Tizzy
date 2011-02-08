@@ -49,7 +49,9 @@ class FSMGen():
         h = NullHandler()
         logging.getLogger("FSMGen").addHandler(h)
 
-        self.subs = {   'filename':             "",
+        self.subs = {   'website':              "https://github.com/inneralien/Tizzy",
+                        'dot_filename':         "",
+                        'filename':             "",
                         'creation_date':        "",
                         'title':                "",
                         'module_name':          "",
@@ -60,7 +62,9 @@ class FSMGen():
                         'range':                "",
                         'next_state_logic':     "",
                         'state_generator':      "",
+                        'state_debug':          "",
         }
+        self.longest_state_str = 0
 
     def getUniqueStates(self):
         return self.__unique_states
@@ -148,6 +152,7 @@ class FSMGen():
         re_states = re.compile(r'^\s*(\w+)\s*->\s*(\w+)')
         re_affectors = re.compile(r'\[\s*label\s*=\s*\"(.*)\"\s*\]')
 
+        self.subs['dot_filename'] = filename
         f = open(filename, 'r')
         self.__dotfile = f.read()
         f.close()
@@ -175,6 +180,8 @@ class FSMGen():
                     self.__unique_states.append(state)
                     self.logger.debug("Adding state: %s" % state)
                     self.__states[state] = StateTransition(state)
+                    if(len(state) > self.longest_state_str):
+                        self.longest_state_str = len(state)
                     ## Find Transitions
                 m_affector = re_affectors.search(line)
                 if(m_affector is not None):
@@ -278,8 +285,32 @@ class FSMGen():
         str += "        state[%s] <= `D 1'b1;" % self.__default_state
         return str
 
+    def genStateDebugString(self):
+        """
+        Returns a string the represents some state debug Verilog code.
+        """
+#        longest = 0
+#        for state in self.__unique_states:
+#            str_len = len(state)
+#            if(str_len > longest):
+#                longest = str_len
+        str = ""
+        str += "// synthesis translate_off\n"
+        str += "// State names for simulation\n"
+        str += "reg [79:0] state_string;\n"
+        str += "always @(*)\n"
+        str += "    case(1'b1)\n"
+        for state in self.__unique_states:
+            state_str = "state[%s]" % state
+            str += '        %s : state_string = "%s";\n' % \
+                (state_str.ljust(8+self.longest_state_str), state)
+        str += "    endcase\n"
+        str += "// synthesis translate_on\n"
+        return str
+
     def fillStringSubs(self):
-        self.subs['creation_date'] = time.strftime("%b %d %Y")
+#        self.subs['creation_date'] = time.strftime("%b %d %Y")
+        self.subs['creation_date'] = time.strftime("%d-%b-%Y")
         self.subs['title'] = self.__title
         self.subs['module_name'] = self.__name
         for i in self.__unique_affectors:
@@ -287,7 +318,8 @@ class FSMGen():
         self.subs['msb'] = self.__num_states-1
         self.subs['lsb'] = 0
         for i in range(self.__num_states):
-            str = "    %s = %d" % (self.__unique_states[i], i)
+            str = "    %s = %d" % \
+                (self.__unique_states[i].ljust(self.longest_state_str), i)
             if(i < self.__num_states-1):
                 str += ",\n"
             else:
@@ -297,6 +329,7 @@ class FSMGen():
         self.subs['next_state_logic'] = self.genNextStateLogicString()
         self.subs['state_generator'] = self.genStateGeneratorString()
         self.subs['digraph'] = self.__dotfile
+        self.subs['state_debug'] = self.genStateDebugString()
 
     def writeVerilog(self, version, filename=None, include_file=None):
         """
