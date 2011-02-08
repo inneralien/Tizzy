@@ -8,9 +8,9 @@ import FSMGen
 import logging
 
 __author__        = "Tim Weaver"
-__copyright__     = "Copyright (c) Very White Atom Design, 2010"
+__copyright__     = "Copyright (C) RTLCores LLC., 2010-2011"
 __creation_date__ = "Thu Sep  2 09:40:29 PDT 2010"
-__version__       = 'v0.2.1'
+__version__       = 'v0.3.0'
 __disclaimer__    = 'Not responsible...Use at your own risk'
 
 if __name__ == '__main__':
